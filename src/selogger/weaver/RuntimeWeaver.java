@@ -8,8 +8,8 @@ import java.security.CodeSource;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 
-import selogger.logging.Logging;
 import selogger.logging.IEventLogger;
+import selogger.logging.Logging;
 
 /**
  * This class is the main program of SELogger as a javaagent.
@@ -69,6 +69,8 @@ public class RuntimeWeaver implements ClassFileTransformer {
 		String dirname = SELOGGER_DEFAULT_OUTPUT_DIR;
 		String weaveOption = WeaveConfig.KEY_RECORD_ALL;
 		String classDumpOption = "false";
+		String weaveStart = "";
+		String weaveEnd = "";
 		exclusion = new ArrayList<String>();
 		for (String pkg: SYSTEM_PACKAGES) exclusion.add(pkg);
 
@@ -104,37 +106,35 @@ public class RuntimeWeaver implements ClassFileTransformer {
 				} else if (opt.startsWith("latest-simple")||opt.startsWith("fixed")) {
 					mode = Mode.FixedSize;
 				}
+			} else if (arg.startsWith("weaveStart=")) {
+				weaveStart = arg.substring("weaveStart=".length());
+			} else if (arg.startsWith("weaveEnd=")) {
+				weaveEnd = arg.substring("weaveEnd=".length());
 			}
 		}
-		
 		File outputDir = new File(dirname);
 		if (!outputDir.exists()) {
 			outputDir.mkdirs();
 		}
-		
+
 		if (outputDir.isDirectory() && outputDir.canWrite()) {
 			WeaveConfig config = new WeaveConfig(weaveOption);
 			if (config.isValid()) {
 				weaver = new Weaver(outputDir, config);
 				weaver.setDumpEnabled(classDumpOption.equalsIgnoreCase("true"));
-				
 				switch (mode) {
 				case FixedSize:
 					logger = Logging.initializeLatestDataLogger(outputDir, bufferSize, keepObject);
 					break;
-					
 				case FixedSizeTimestamp:
 					logger = Logging.initializeLatestEventTimeLogger(outputDir, bufferSize, keepObject);
 					break;
-				
 				case Frequency:
-					logger = Logging.initializeFrequencyLogger(outputDir);
+					logger = Logging.initializeFrequencyLogger(outputDir, weaveStart, weaveEnd);
 					break;
-					
 				case Stream:
 					logger = Logging.initializeStreamLogger(outputDir, true, weaver);
 					break;
-					
 				case Discard:
 					logger = Logging.initializeDiscardLogger();
 					break;
@@ -148,7 +148,6 @@ public class RuntimeWeaver implements ClassFileTransformer {
 			weaver = null;
 		}
 	}
-	
 	/**
 	 * @return true if the logging is executable
 	 */
@@ -163,7 +162,6 @@ public class RuntimeWeaver implements ClassFileTransformer {
 		logger.close();
 		weaver.close();
 	}
-	
 	/**
 	 * This method checks whether a given class is a logging target or not. 
 	 * @param className specifies a class.  A package separator is "/".
@@ -186,9 +184,9 @@ public class RuntimeWeaver implements ClassFileTransformer {
 	@Override
 	public synchronized byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
 			ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
-		
+
 		if (isExcludedFromLogging(className)) return null;
-		
+
 		if (protectionDomain != null) {
 			CodeSource s = protectionDomain.getCodeSource();
 			String l;

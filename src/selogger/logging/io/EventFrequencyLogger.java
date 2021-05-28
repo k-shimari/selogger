@@ -31,13 +31,38 @@ public class EventFrequencyLogger implements IEventLogger {
 	private File outputDir;
 	
 	/**
+	 * A flag indicates whether the current interval is the specifed interval by option.
+	 */
+	private boolean isRecord = false;
+
+	/**
+	 * A dataid which starts recording the instruction.
+	 */
+	private int weaveStartDataId = 100;
+	
+	/**
+	 * A dataid which ends recording the instruction.
+	 */
+	private int weaveEndDataId = 200;
+	
+	/**
 	 * Create the logger object.
 	 * @param outputDir specifies a directory where a resultant file is stored
 	 */
-	public EventFrequencyLogger(File outputDir) {
+	public EventFrequencyLogger(File outputDir, String weaveStart, String weaveEnd) {
 		this.outputDir = outputDir;
 		counters = new ArrayList<>();
 	}
+	
+	
+	/**
+	 * Create the logger object.
+	 * @param outputDir specifies a directory where a resultant file is stored
+	 */
+	public void setIsRecord(){
+		isRecord = true;
+	}
+	
 	
 	/**
 	 * Count the event occurrence.
@@ -46,7 +71,8 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, boolean value) {
-		countOccurrence(dataId);
+		isRecord = (dataId == weaveStartDataId || isRecord) && dataId != weaveEndDataId;
+		if (isRecord) countOccurrence(dataId);
 	}
 	
 	/**
@@ -56,7 +82,8 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, byte value) {
-		countOccurrence(dataId);
+		isRecord = (dataId == weaveStartDataId || isRecord) && dataId != weaveEndDataId;
+		if (isRecord) countOccurrence(dataId);
 	}
 	
 	/**
@@ -66,7 +93,8 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, char value) {
-		countOccurrence(dataId);
+		isRecord = (dataId == weaveStartDataId || isRecord) && dataId != weaveEndDataId;
+		if (isRecord) countOccurrence(dataId);
 	}
 	
 	/**
@@ -76,7 +104,8 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, double value) {
-		countOccurrence(dataId);
+		isRecord = (dataId == weaveStartDataId || isRecord) && dataId != weaveEndDataId;
+		if (isRecord) countOccurrence(dataId);
 	}
 	
 	/**
@@ -86,7 +115,8 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, float value) {
-		countOccurrence(dataId);
+		isRecord = (dataId == weaveStartDataId || isRecord) && dataId != weaveEndDataId;
+		if (isRecord) countOccurrence(dataId);
 	}
 	
 	/**
@@ -96,7 +126,8 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, int value) {
-		countOccurrence(dataId);
+		isRecord = (dataId == weaveStartDataId || isRecord) && dataId != weaveEndDataId;
+		if (isRecord) countOccurrence(dataId);
 	}
 	
 	/**
@@ -106,7 +137,8 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, long value) {
-		countOccurrence(dataId);
+		isRecord = (dataId == weaveStartDataId || isRecord) && dataId != weaveEndDataId;
+		if (isRecord) countOccurrence(dataId);
 	}
 	
 	/**
@@ -116,7 +148,8 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, Object value) {
-		countOccurrence(dataId);
+		isRecord = (dataId == weaveStartDataId || isRecord) && dataId != weaveEndDataId;
+		if (isRecord) countOccurrence(dataId);
 	}
 	
 	/**
@@ -126,7 +159,8 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, short value) {
-		countOccurrence(dataId);
+		isRecord = (dataId == weaveStartDataId || isRecord) && dataId != weaveEndDataId;
+		if (isRecord) countOccurrence(dataId);
 	}
 	
 	/**
