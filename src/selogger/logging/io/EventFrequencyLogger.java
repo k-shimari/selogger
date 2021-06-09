@@ -20,7 +20,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	/**
 	 * The name of a file created by this logger
 	 */
-	private static final String FILENAME = "eventfreq";
+	private static final String FILENAME = "eventfreq.txt";
 
 	public static final String LOG_PREFIX = "eventfreq-";
 	public static final String LOG_SUFFIX = ".txt";
