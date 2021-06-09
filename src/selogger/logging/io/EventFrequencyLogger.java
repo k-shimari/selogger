@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import selogger.logging.IEventLogger;
 import selogger.logging.util.FileNameGenerator;
+import selogger.weaver.Weaver;
 
 /**
  * This class is an implementation of IEventLogger that counts
@@ -25,7 +26,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	public static final String LOG_SUFFIX = ".txt";
 	
 	FileNameGenerator fng;
-	
+	Weaver weaver;
+	String weaveStart;
+	String weaveEnd;
 	/**
 	 * Array of counter objects.  dataId is used as an index for this array.
 	 */
@@ -44,31 +47,39 @@ public class EventFrequencyLogger implements IEventLogger {
 	/**
 	 * A dataid which starts recording the instruction.
 	 */
-	private int weaveStartDataId = 100;
+	public static int weaveStartDataId = 100;
 	
 	/**
 	 * A dataid which ends recording the instruction.
 	 */
-	private int weaveEndDataId = 200;
+	public static int weaveEndDataId = 199;
 	
 	/**
 	 * Create the logger object.
 	 * @param outputDir specifies a directory where a resultant file is stored
 	 */
-	public EventFrequencyLogger(File outputDir, String weaveStart, String weaveEnd) {
+	public EventFrequencyLogger(File outputDir, Weaver weaver, String weaveStart, String weaveEnd) {
 		this.outputDir = outputDir;
 		counters = new ArrayList<>();
 		fng = new FileNameGenerator(outputDir, LOG_PREFIX, LOG_SUFFIX);
+		this.weaver = weaver;
+		this.weaveStart = weaveStart;
+		this.weaveEnd = weaveEnd;
 	}
 	
 	
-	/**
-	 * Create the logger object.
-	 * @param outputDir specifies a directory where a resultant file is stored
-	 */
+	
 	public void setIsRecord(){
-		isRecord = true;
+//		isRecord = true;
 	}
+	
+	public void setDataId(){
+//		isRecord = true;
+		//weaverのweaveLogからmethodname-methodID pair取ってきてmethodname to methodIDに変換する
+		// dataidのなかでmethodIDが該当するものを取ってweaveStart/EndDataIdに代入
+		//weaver;
+	}
+	
 	
 	
 	/**
@@ -78,6 +89,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, boolean value) {
+		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
+			setDataId();
+		}
 		if(dataId == weaveStartDataId)  isRecord =true; 
 		if(dataId == weaveEndDataId) {
 			isRecord = false;
@@ -94,6 +108,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	@Override
 	public void recordEvent(int dataId, byte value) {
 //		isRecord = (dataId == weaveStartDataId || isRecord) && dataId != weaveEndDataId;
+		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
+			setDataId();
+		}
 		if(dataId == weaveStartDataId)  isRecord =true; 
 		if (isRecord) countOccurrence(dataId);
 		if(dataId == weaveEndDataId) {
@@ -109,6 +126,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, char value) {
+		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
+			setDataId();
+		}
 		if(dataId == weaveStartDataId)  isRecord =true; 
 		if (isRecord) countOccurrence(dataId);
 		if(dataId == weaveEndDataId) {
@@ -124,6 +144,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, double value) {
+		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
+			setDataId();
+		}
 		if(dataId == weaveStartDataId)  isRecord =true; 
 		if (isRecord) countOccurrence(dataId);
 		if(dataId == weaveEndDataId) {
@@ -139,6 +162,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, float value) {
+		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
+			setDataId();
+		}
 		if(dataId == weaveStartDataId)  isRecord =true; 
 		if (isRecord) countOccurrence(dataId);
 		if(dataId == weaveEndDataId) {
@@ -154,6 +180,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, int value) {
+		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
+			setDataId();
+		}
 		if(dataId == weaveStartDataId)  isRecord =true; 
 		if (isRecord) countOccurrence(dataId);
 		if(dataId == weaveEndDataId) {
@@ -169,6 +198,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, long value) {
+		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
+			setDataId();
+		}
 		if(dataId == weaveStartDataId)  isRecord =true; 
 		if (isRecord) countOccurrence(dataId);
 		if(dataId == weaveEndDataId) {
@@ -184,6 +216,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, Object value) {
+		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
+			setDataId();
+		}
 		if(dataId == weaveStartDataId)  isRecord =true; 
 		if (isRecord) countOccurrence(dataId);
 		if(dataId == weaveEndDataId) {
@@ -199,6 +234,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, short value) {
+		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
+			setDataId();
+		}
 		if(dataId == weaveStartDataId)  isRecord =true; 
 		if (isRecord) countOccurrence(dataId);
 		if(dataId == weaveEndDataId) {

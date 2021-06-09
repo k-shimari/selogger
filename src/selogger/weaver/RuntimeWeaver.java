@@ -56,6 +56,9 @@ public class RuntimeWeaver implements ClassFileTransformer {
 	private static final String[] SYSTEM_PACKAGES =  { "sun/", "com/sun/", "java/", "javax/" };
 	private static final String ARG_SEPARATOR = ",";
 	private static final String SELOGGER_DEFAULT_OUTPUT_DIR = "selogger-output";
+	
+	public static String WEAVESTART;
+	public static String WEAVEEND;
 
 	public enum Mode { Stream, Frequency, FixedSize, FixedSizeTimestamp, Discard };
 
@@ -108,8 +111,10 @@ public class RuntimeWeaver implements ClassFileTransformer {
 				}
 			} else if (arg.startsWith("weaveStart=")) {
 				weaveStart = arg.substring("weaveStart=".length());
+				WEAVESTART=weaveStart;
 			} else if (arg.startsWith("weaveEnd=")) {
 				weaveEnd = arg.substring("weaveEnd=".length());
+				WEAVEEND=weaveEnd;
 			}
 		}
 		File outputDir = new File(dirname);
@@ -130,7 +135,7 @@ public class RuntimeWeaver implements ClassFileTransformer {
 					logger = Logging.initializeLatestEventTimeLogger(outputDir, bufferSize, keepObject);
 					break;
 				case Frequency:
-					logger = Logging.initializeFrequencyLogger(outputDir, weaveStart, weaveEnd);
+					logger = Logging.initializeFrequencyLogger(outputDir, weaver, weaveStart, weaveEnd);
 					break;
 				case Stream:
 					logger = Logging.initializeStreamLogger(outputDir, true, weaver);

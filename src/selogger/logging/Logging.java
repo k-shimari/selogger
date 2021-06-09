@@ -9,6 +9,7 @@ import selogger.logging.io.EventStreamLogger;
 import selogger.logging.io.LatestEventLogger;
 import selogger.logging.io.LatestEventTimeLogger;
 import selogger.logging.io.MemoryLogger;
+import selogger.weaver.Weaver;
 
 
 
@@ -51,8 +52,8 @@ public class Logging {
 	 * @param outputDir specifies a directory where files are created.
 	 * @return the created logger instance.
 	 */
-	public static IEventLogger initializeFrequencyLogger(File outputDir, String weaveStart, String weaveEnd) {
-		INSTANCE = new EventFrequencyLogger(outputDir, weaveStart, weaveEnd);
+	public static IEventLogger initializeFrequencyLogger(File outputDir, Weaver weaver, String weaveStart, String weaveEnd) {
+		INSTANCE = new EventFrequencyLogger(outputDir, weaver, weaveStart, weaveEnd);
 		return INSTANCE;
 	}
 	
