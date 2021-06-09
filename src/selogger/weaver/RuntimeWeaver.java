@@ -56,9 +56,6 @@ public class RuntimeWeaver implements ClassFileTransformer {
 	private static final String[] SYSTEM_PACKAGES =  { "sun/", "com/sun/", "java/", "javax/" };
 	private static final String ARG_SEPARATOR = ",";
 	private static final String SELOGGER_DEFAULT_OUTPUT_DIR = "selogger-output";
-	
-	public static String WEAVESTART;
-	public static String WEAVEEND;
 
 	public enum Mode { Stream, Frequency, FixedSize, FixedSizeTimestamp, Discard };
 
@@ -111,10 +108,8 @@ public class RuntimeWeaver implements ClassFileTransformer {
 				}
 			} else if (arg.startsWith("weaveStart=")) {
 				weaveStart = arg.substring("weaveStart=".length());
-				WEAVESTART=weaveStart;
 			} else if (arg.startsWith("weaveEnd=")) {
 				weaveEnd = arg.substring("weaveEnd=".length());
-				WEAVEEND=weaveEnd;
 			}
 		}
 		File outputDir = new File(dirname);
@@ -125,24 +120,24 @@ public class RuntimeWeaver implements ClassFileTransformer {
 		if (outputDir.isDirectory() && outputDir.canWrite()) {
 			WeaveConfig config = new WeaveConfig(weaveOption);
 			if (config.isValid()) {
-				weaver = new Weaver(outputDir, config);
+				weaver = new Weaver(outputDir, weaveStart, weaveEnd, config);
 				weaver.setDumpEnabled(classDumpOption.equalsIgnoreCase("true"));
 				switch (mode) {
-				case FixedSize:
-					logger = Logging.initializeLatestDataLogger(outputDir, bufferSize, keepObject);
-					break;
-				case FixedSizeTimestamp:
-					logger = Logging.initializeLatestEventTimeLogger(outputDir, bufferSize, keepObject);
-					break;
-				case Frequency:
-					logger = Logging.initializeFrequencyLogger(outputDir, weaver, weaveStart, weaveEnd);
-					break;
-				case Stream:
-					logger = Logging.initializeStreamLogger(outputDir, true, weaver);
-					break;
-				case Discard:
-					logger = Logging.initializeDiscardLogger();
-					break;
+					case FixedSize:
+						logger = Logging.initializeLatestDataLogger(outputDir, bufferSize, keepObject);
+						break;
+					case FixedSizeTimestamp:
+						logger = Logging.initializeLatestEventTimeLogger(outputDir, bufferSize, keepObject);
+						break;
+					case Frequency:
+						logger = Logging.initializeFrequencyLogger(outputDir, weaver);
+						break;
+					case Stream:
+						logger = Logging.initializeStreamLogger(outputDir, true, weaver);
+						break;
+					case Discard:
+						logger = Logging.initializeDiscardLogger();
+						break;
 				}
 			} else {
 				System.out.println("No weaving option is specified.");

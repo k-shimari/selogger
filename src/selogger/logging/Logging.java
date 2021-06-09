@@ -52,8 +52,8 @@ public class Logging {
 	 * @param outputDir specifies a directory where files are created.
 	 * @return the created logger instance.
 	 */
-	public static IEventLogger initializeFrequencyLogger(File outputDir, Weaver weaver, String weaveStart, String weaveEnd) {
-		INSTANCE = new EventFrequencyLogger(outputDir, weaver, weaveStart, weaveEnd);
+	public static IEventLogger initializeFrequencyLogger(File outputDir, Weaver weaver) {
+		INSTANCE = new EventFrequencyLogger(outputDir, weaver);
 		return INSTANCE;
 	}
 	

@@ -14,7 +14,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import selogger.logging.IErrorLogger;
-import selogger.logging.io.EventFrequencyLogger;
 
 /**
  * This class manages bytecode injection process and weaving logs.
@@ -48,24 +47,35 @@ public class Weaver implements IErrorLogger {
 	private MessageDigest digest;
 	private WeaveConfig config;
 
-	private int startMethodID;
-	private int endMethodID;
+	private boolean isFiltering;
+	private String weaveStart;
+	private String weaveEnd;
+	private int startMethodId;
+	private int endMethodId;
 
+	private int filteringStartDataId;
+	private int filteringEndDataId;
+		
+	
 	/**
 	 * Set up the object to manage a weaving process. 
 	 * This constructor creates files to store the information.
 	 * @param outputDir
 	 */
-	public Weaver(File outputDir, WeaveConfig config) {
+	public Weaver(File outputDir, String weaveStart, String weaveEnd, WeaveConfig config) {	
 		assert outputDir.isDirectory() && outputDir.canWrite();
 		
+		this.weaveStart = weaveStart;
+		this.weaveEnd = weaveEnd;
+		isFiltering = !(weaveStart.equals("") && weaveEnd.equals(""));
+		startMethodId = -1;
+		endMethodId = -1;
+
 		this.outputDir = outputDir;
 		this.config = config;
 		confirmedDataId = 0;
 		confirmedMethodId = 0;
 		classId = 0;
-		startMethodID = -1;
-		endMethodID = -1;
 		
 		try {
 			logger = new PrintStream(new File(outputDir, ERROR_LOG_FILE)); 
@@ -91,6 +101,7 @@ public class Weaver implements IErrorLogger {
 
 	}
 	
+
 	/**
 	 * Record a message.
 	 */
@@ -231,15 +242,17 @@ public class Weaver implements IErrorLogger {
 				for (MethodInfo method: result.getMethods()) {					
 					methodIdWriter.write(method.toString());
 					methodIdWriter.write(lineSeparator);
-					if(method.getClassName().equals(RuntimeWeaver.WEAVESTART.substring(0, RuntimeWeaver.WEAVESTART.indexOf(".")))
-						&& method.getMethodName().equals(RuntimeWeaver.WEAVESTART.substring(RuntimeWeaver.WEAVESTART.indexOf(".") + 1))){
-						startMethodID=confirmedMethodId - result.getMethods().size() + idx;
+					if(isFiltering) {
+						if(!weaveStart.equals("") && method.getClassName().equals(weaveStart.substring(0, weaveStart.indexOf(".")))
+							&& method.getMethodName().equals(weaveStart.substring(weaveStart.indexOf(".") + 1))){
+							startMethodId = confirmedMethodId - result.getMethods().size() + idx;
+						}
+						if(!weaveEnd.equals("") && method.getClassName().equals(weaveEnd.substring(0, weaveEnd.indexOf(".")))
+								&& method.getMethodName().equals(weaveEnd.substring(weaveEnd.indexOf(".") + 1))){
+							endMethodId = confirmedMethodId - result.getMethods().size() + idx;
+						}
+						idx++;
 					}
-					if(method.getClassName().equals(RuntimeWeaver.WEAVEEND.substring(0, RuntimeWeaver.WEAVEEND.indexOf(".")))
-							&& method.getMethodName().equals(RuntimeWeaver.WEAVEEND.substring(RuntimeWeaver.WEAVEEND.indexOf(".") + 1))){
-						endMethodID = confirmedMethodId - result.getMethods().size() + idx;
-					}
-					idx++;
 				}
 				methodIdWriter.flush();
 			} catch (IOException e) {
@@ -253,25 +266,29 @@ public class Weaver implements IErrorLogger {
 		try {
 			if (dataIdWriter != null) {
 				for (DataInfo loc: result.getDataEntries()) {
-					if(startMethodID != -1) {
-						if(loc.getMethodId() == startMethodID) {
-							EventFrequencyLogger.weaveStartDataId = loc.getDataId() + 1;
-							startMethodID = -1;
+					dataIdWriter.write(loc.toString());
+					dataIdWriter.write(lineSeparator);
+					if(isFiltering) {
+						if(startMethodId != -1) {
+							if(loc.getMethodId() == startMethodId) {
+								filteringStartDataId = loc.getDataId() + 1;
+								startMethodId = -1;
+//								System.out.println("start:" + filteringStartDataId);
+							}
 						}
-					}
-					if(endMethodID!=-1) {
-						if(loc.getMethodId()==endMethodID) {
-//							if(loc.getEventType().toString().equals("METHOD_NORMAL_EXIT") || loc.getEventType().toString().equals("METHOD_EXCEPTIONAL_EXIT")) {
-							if(loc.getEventType().toString().equals("METHOD_NORMAL_EXIT")) {
-								//TODO exceptionがあるときはそっちそうでないときはNORMALにする
-								EventFrequencyLogger.weaveEndDataId = loc.getDataId();
-								endMethodID = -1;
-								System.out.println("end:" + EventFrequencyLogger.weaveEndDataId);
+						if(endMethodId != -1) {
+							if(loc.getMethodId() == endMethodId) {
+								//	if(loc.getEventType().toString().equals("METHOD_NORMAL_EXIT") || loc.getEventType().toString().equals("METHOD_EXCEPTIONAL_EXIT")) {
+								if(loc.getEventType().toString().equals("METHOD_NORMAL_EXIT")) {
+									//TODO どちらでも終了をひっかけられるようにする
+									//TODO 再帰どうするか検討する
+									filteringEndDataId = loc.getDataId();
+									endMethodId = -1;
+//									System.out.println("end:" + filteringEndDataId);
+								}
 							}
 						}
 					}
-					dataIdWriter.write(loc.toString());
-					dataIdWriter.write(lineSeparator);
 				}
 				dataIdWriter.flush();
 			}
@@ -323,4 +340,17 @@ public class Weaver implements IErrorLogger {
 		}
 	}
 	
+	public boolean getIsFiltering() {
+		return isFiltering;
+	}
+
+	public int getFilteringStartDataId() {
+		return filteringStartDataId;
+	}
+
+
+	public int getFilteringEndDataId() {
+		return filteringEndDataId;
+	}
+
 }

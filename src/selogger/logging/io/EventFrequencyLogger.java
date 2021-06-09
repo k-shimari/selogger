@@ -27,8 +27,6 @@ public class EventFrequencyLogger implements IEventLogger {
 	
 	FileNameGenerator fng;
 	Weaver weaver;
-	String weaveStart;
-	String weaveEnd;
 	/**
 	 * Array of counter objects.  dataId is used as an index for this array.
 	 */
@@ -42,7 +40,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	/**
 	 * A flag indicates whether the current interval is the specifed interval by option.
 	 */
-	private boolean isRecord = false;
+	private boolean isRecord;
 
 	/**
 	 * A dataid which starts recording the instruction.
@@ -58,27 +56,14 @@ public class EventFrequencyLogger implements IEventLogger {
 	 * Create the logger object.
 	 * @param outputDir specifies a directory where a resultant file is stored
 	 */
-	public EventFrequencyLogger(File outputDir, Weaver weaver, String weaveStart, String weaveEnd) {
+	public EventFrequencyLogger(File outputDir, Weaver weaver) {
 		this.outputDir = outputDir;
 		counters = new ArrayList<>();
 		fng = new FileNameGenerator(outputDir, LOG_PREFIX, LOG_SUFFIX);
 		this.weaver = weaver;
-		this.weaveStart = weaveStart;
-		this.weaveEnd = weaveEnd;
+		isRecord = weaver.getFilteringStartDataId() == -1; 
 	}
 	
-	
-	
-	public void setIsRecord(){
-//		isRecord = true;
-	}
-	
-	public void setDataId(){
-//		isRecord = true;
-		//weaverのweaveLogからmethodname-methodID pair取ってきてmethodname to methodIDに変換する
-		// dataidのなかでmethodIDが該当するものを取ってweaveStart/EndDataIdに代入
-		//weaver;
-	}
 	
 	
 	
@@ -89,15 +74,12 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, boolean value) {
-		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
-			setDataId();
-		}
-		if(dataId == weaveStartDataId)  isRecord =true; 
-		if(dataId == weaveEndDataId) {
+		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
+		if (isRecord) countOccurrence(dataId);
+		if(dataId == weaver.getFilteringEndDataId()) {
 			isRecord = false;
 			this.close();
 		}
-		if (isRecord) countOccurrence(dataId);
 	}
 	
 	/**
@@ -107,13 +89,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, byte value) {
-//		isRecord = (dataId == weaveStartDataId || isRecord) && dataId != weaveEndDataId;
-		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
-			setDataId();
-		}
-		if(dataId == weaveStartDataId)  isRecord =true; 
+		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
 		if (isRecord) countOccurrence(dataId);
-		if(dataId == weaveEndDataId) {
+		if(dataId == weaver.getFilteringEndDataId()) {
 			isRecord = false;
 			this.close();
 		}
@@ -126,12 +104,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, char value) {
-		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
-			setDataId();
-		}
-		if(dataId == weaveStartDataId)  isRecord =true; 
+		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
 		if (isRecord) countOccurrence(dataId);
-		if(dataId == weaveEndDataId) {
+		if(dataId == weaver.getFilteringEndDataId()) {
 			isRecord = false;
 			this.close();
 		}
@@ -144,12 +119,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, double value) {
-		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
-			setDataId();
-		}
-		if(dataId == weaveStartDataId)  isRecord =true; 
+		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
 		if (isRecord) countOccurrence(dataId);
-		if(dataId == weaveEndDataId) {
+		if(dataId == weaver.getFilteringEndDataId()) {
 			isRecord = false;
 			this.close();
 		}
@@ -162,12 +134,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, float value) {
-		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
-			setDataId();
-		}
-		if(dataId == weaveStartDataId)  isRecord =true; 
+		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
 		if (isRecord) countOccurrence(dataId);
-		if(dataId == weaveEndDataId) {
+		if(dataId == weaver.getFilteringEndDataId()) {
 			isRecord = false;
 			this.close();
 		}
@@ -180,12 +149,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, int value) {
-		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
-			setDataId();
-		}
-		if(dataId == weaveStartDataId)  isRecord =true; 
+		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
 		if (isRecord) countOccurrence(dataId);
-		if(dataId == weaveEndDataId) {
+		if(dataId == weaver.getFilteringEndDataId()) {
 			isRecord = false;
 			this.close();
 		}
@@ -198,12 +164,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, long value) {
-		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
-			setDataId();
-		}
-		if(dataId == weaveStartDataId)  isRecord =true; 
+		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
 		if (isRecord) countOccurrence(dataId);
-		if(dataId == weaveEndDataId) {
+		if(dataId == weaver.getFilteringEndDataId()) {
 			isRecord = false;
 			this.close();
 		}
@@ -216,12 +179,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, Object value) {
-		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
-			setDataId();
-		}
-		if(dataId == weaveStartDataId)  isRecord =true; 
+		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
 		if (isRecord) countOccurrence(dataId);
-		if(dataId == weaveEndDataId) {
+		if(dataId == weaver.getFilteringEndDataId()) {
 			isRecord = false;
 			this.close();
 		}
@@ -234,12 +194,9 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, short value) {
-		if (weaveStartDataId == -1 || weaveEndDataId ==-1){
-			setDataId();
-		}
-		if(dataId == weaveStartDataId)  isRecord =true; 
+		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
 		if (isRecord) countOccurrence(dataId);
-		if(dataId == weaveEndDataId) {
+		if(dataId == weaver.getFilteringEndDataId()) {
 			isRecord = false;
 			this.close();
 		}
