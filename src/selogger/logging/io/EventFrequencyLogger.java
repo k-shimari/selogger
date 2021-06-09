@@ -43,16 +43,6 @@ public class EventFrequencyLogger implements IEventLogger {
 	private boolean isRecord;
 
 	/**
-	 * A dataid which starts recording the instruction.
-	 */
-	public static int weaveStartDataId = 100;
-	
-	/**
-	 * A dataid which ends recording the instruction.
-	 */
-	public static int weaveEndDataId = 199;
-	
-	/**
 	 * Create the logger object.
 	 * @param outputDir specifies a directory where a resultant file is stored
 	 */
@@ -61,7 +51,8 @@ public class EventFrequencyLogger implements IEventLogger {
 		counters = new ArrayList<>();
 		fng = new FileNameGenerator(outputDir, LOG_PREFIX, LOG_SUFFIX);
 		this.weaver = weaver;
-		isRecord = weaver.getFilteringStartDataId() == -1; 
+		//TODO fix this assignment when incorrect weaveStart
+		isRecord = weaver.getWeaveStart().equals(""); 
 	}
 	
 	
@@ -225,8 +216,8 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public synchronized void close() {
-//		try (PrintWriter w = new PrintWriter(new FileWriter(new File(outputDir, FILENAME)))) {
-		try (PrintWriter w = new PrintWriter(new FileWriter(fng.getNextFile()))) {
+		File file = weaver.getIsFiltering() ? fng.getNextFile() : new File(outputDir, FILENAME);
+		try (PrintWriter w = new PrintWriter(new FileWriter(file))) {
 			for (int i=0; i<counters.size(); i++) {
 				AtomicInteger c = counters.get(i);
 				int count = c.get();
@@ -236,6 +227,7 @@ public class EventFrequencyLogger implements IEventLogger {
 				}
 			}
 		} catch (IOException e) {
+			
 		}
 	}
 	

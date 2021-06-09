@@ -65,11 +65,13 @@ public class Weaver implements IErrorLogger {
 	public Weaver(File outputDir, String weaveStart, String weaveEnd, WeaveConfig config) {	
 		assert outputDir.isDirectory() && outputDir.canWrite();
 		
+		isFiltering = !(weaveStart.equals("") && weaveEnd.equals(""));
 		this.weaveStart = weaveStart;
 		this.weaveEnd = weaveEnd;
-		isFiltering = !(weaveStart.equals("") && weaveEnd.equals(""));
 		startMethodId = -1;
 		endMethodId = -1;
+		filteringStartDataId = -1;
+		filteringEndDataId = -1;
 
 		this.outputDir = outputDir;
 		this.config = config;
@@ -273,7 +275,7 @@ public class Weaver implements IErrorLogger {
 							if(loc.getMethodId() == startMethodId) {
 								filteringStartDataId = loc.getDataId() + 1;
 								startMethodId = -1;
-//								System.out.println("start:" + filteringStartDataId);
+								System.out.println("start:" + filteringStartDataId);
 							}
 						}
 						if(endMethodId != -1) {
@@ -284,7 +286,7 @@ public class Weaver implements IErrorLogger {
 									//TODO 再帰どうするか検討する
 									filteringEndDataId = loc.getDataId();
 									endMethodId = -1;
-//									System.out.println("end:" + filteringEndDataId);
+									System.out.println("end:" + filteringEndDataId);
 								}
 							}
 						}
@@ -342,6 +344,10 @@ public class Weaver implements IErrorLogger {
 	
 	public boolean getIsFiltering() {
 		return isFiltering;
+	}
+
+	public String getWeaveStart() {
+		return weaveStart;
 	}
 
 	public int getFilteringStartDataId() {
