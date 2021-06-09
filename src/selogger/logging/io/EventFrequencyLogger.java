@@ -55,9 +55,6 @@ public class EventFrequencyLogger implements IEventLogger {
 		isRecord = weaver.getWeaveStart().equals(""); 
 	}
 	
-	
-	
-	
 	/**
 	 * Count the event occurrence.
 	 * @param dataId specifies an event to be counted.
@@ -65,12 +62,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, boolean value) {
-		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
-		if (isRecord) countOccurrence(dataId);
-		if(dataId == weaver.getFilteringEndDataId()) {
-			isRecord = false;
-			this.close();
-		}
+		recordEvent(dataId);
 	}
 	
 	/**
@@ -80,12 +72,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, byte value) {
-		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
-		if (isRecord) countOccurrence(dataId);
-		if(dataId == weaver.getFilteringEndDataId()) {
-			isRecord = false;
-			this.close();
-		}
+		recordEvent(dataId);
 	}
 	
 	/**
@@ -95,12 +82,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, char value) {
-		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
-		if (isRecord) countOccurrence(dataId);
-		if(dataId == weaver.getFilteringEndDataId()) {
-			isRecord = false;
-			this.close();
-		}
+		recordEvent(dataId);
 	}
 	
 	/**
@@ -110,12 +92,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, double value) {
-		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
-		if (isRecord) countOccurrence(dataId);
-		if(dataId == weaver.getFilteringEndDataId()) {
-			isRecord = false;
-			this.close();
-		}
+		recordEvent(dataId);
 	}
 	
 	/**
@@ -125,12 +102,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, float value) {
-		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
-		if (isRecord) countOccurrence(dataId);
-		if(dataId == weaver.getFilteringEndDataId()) {
-			isRecord = false;
-			this.close();
-		}
+		recordEvent(dataId);
 	}
 	
 	/**
@@ -140,12 +112,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, int value) {
-		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
-		if (isRecord) countOccurrence(dataId);
-		if(dataId == weaver.getFilteringEndDataId()) {
-			isRecord = false;
-			this.close();
-		}
+		recordEvent(dataId);
 	}
 	
 	/**
@@ -155,12 +122,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, long value) {
-		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
-		if (isRecord) countOccurrence(dataId);
-		if(dataId == weaver.getFilteringEndDataId()) {
-			isRecord = false;
-			this.close();
-		}
+		recordEvent(dataId);
 	}
 	
 	/**
@@ -170,12 +132,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, Object value) {
-		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
-		if (isRecord) countOccurrence(dataId);
-		if(dataId == weaver.getFilteringEndDataId()) {
-			isRecord = false;
-			this.close();
-		}
+		recordEvent(dataId);
 	}
 	
 	/**
@@ -185,6 +142,10 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, short value) {
+		recordEvent(dataId);
+	}
+	
+	private void recordEvent(int dataId) {
 		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
 		if (isRecord) countOccurrence(dataId);
 		if(dataId == weaver.getFilteringEndDataId()) {

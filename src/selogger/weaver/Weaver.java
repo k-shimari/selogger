@@ -275,18 +275,16 @@ public class Weaver implements IErrorLogger {
 							if(loc.getMethodId() == startMethodId) {
 								filteringStartDataId = loc.getDataId() + 1;
 								startMethodId = -1;
-								System.out.println("start:" + filteringStartDataId);
 							}
 						}
 						if(endMethodId != -1) {
 							if(loc.getMethodId() == endMethodId) {
 								//	if(loc.getEventType().toString().equals("METHOD_NORMAL_EXIT") || loc.getEventType().toString().equals("METHOD_EXCEPTIONAL_EXIT")) {
 								if(loc.getEventType().toString().equals("METHOD_NORMAL_EXIT")) {
-									//TODO どちらでも終了をひっかけられるようにする
-									//TODO 再帰どうするか検討する
+									//TODO set multiple endID because method can hook both exit event
+									//TODO limitation: recursive method call
 									filteringEndDataId = loc.getDataId();
 									endMethodId = -1;
-									System.out.println("end:" + filteringEndDataId);
 								}
 							}
 						}

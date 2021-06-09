@@ -112,6 +112,7 @@ public class RuntimeWeaver implements ClassFileTransformer {
 				weaveEnd = arg.substring("weaveEnd=".length());
 			}
 		}
+		
 		File outputDir = new File(dirname);
 		if (!outputDir.exists()) {
 			outputDir.mkdirs();
@@ -126,15 +127,19 @@ public class RuntimeWeaver implements ClassFileTransformer {
 					case FixedSize:
 						logger = Logging.initializeLatestDataLogger(outputDir, bufferSize, keepObject);
 						break;
+						
 					case FixedSizeTimestamp:
 						logger = Logging.initializeLatestEventTimeLogger(outputDir, bufferSize, keepObject);
 						break;
+						
 					case Frequency:
 						logger = Logging.initializeFrequencyLogger(outputDir, weaver);
 						break;
+						
 					case Stream:
 						logger = Logging.initializeStreamLogger(outputDir, true, weaver);
 						break;
+						
 					case Discard:
 						logger = Logging.initializeDiscardLogger();
 						break;
