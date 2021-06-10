@@ -8,6 +8,8 @@ import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import selogger.logging.IEventLogger;
+import selogger.logging.util.FileNameGenerator;
+import selogger.weaver.Weaver;
 
 /**
  * This class is an implementation of IEventLogger that counts
@@ -20,6 +22,11 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	private static final String FILENAME = "eventfreq.txt";
 
+	public static final String LOG_PREFIX = "eventfreq-";
+	public static final String LOG_SUFFIX = ".txt";
+	
+	FileNameGenerator fng;
+	Weaver weaver;
 	/**
 	 * Array of counter objects.  dataId is used as an index for this array.
 	 */
@@ -31,12 +38,21 @@ public class EventFrequencyLogger implements IEventLogger {
 	private File outputDir;
 	
 	/**
+	 * A flag indicates whether the current interval is the specifed interval by option.
+	 */
+	private boolean isRecord;
+
+	/**
 	 * Create the logger object.
 	 * @param outputDir specifies a directory where a resultant file is stored
 	 */
-	public EventFrequencyLogger(File outputDir) {
+	public EventFrequencyLogger(File outputDir, Weaver weaver) {
 		this.outputDir = outputDir;
 		counters = new ArrayList<>();
+		fng = new FileNameGenerator(outputDir, LOG_PREFIX, LOG_SUFFIX);
+		this.weaver = weaver;
+		//TODO fix this assignment when incorrect weaveStart
+		isRecord = weaver.getWeaveStart().equals(""); 
 	}
 	
 	/**
@@ -46,7 +62,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, boolean value) {
-		countOccurrence(dataId);
+		recordEvent(dataId);
 	}
 	
 	/**
@@ -56,7 +72,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, byte value) {
-		countOccurrence(dataId);
+		recordEvent(dataId);
 	}
 	
 	/**
@@ -66,7 +82,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, char value) {
-		countOccurrence(dataId);
+		recordEvent(dataId);
 	}
 	
 	/**
@@ -76,7 +92,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, double value) {
-		countOccurrence(dataId);
+		recordEvent(dataId);
 	}
 	
 	/**
@@ -86,7 +102,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, float value) {
-		countOccurrence(dataId);
+		recordEvent(dataId);
 	}
 	
 	/**
@@ -96,7 +112,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, int value) {
-		countOccurrence(dataId);
+		recordEvent(dataId);
 	}
 	
 	/**
@@ -106,7 +122,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, long value) {
-		countOccurrence(dataId);
+		recordEvent(dataId);
 	}
 	
 	/**
@@ -116,7 +132,7 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, Object value) {
-		countOccurrence(dataId);
+		recordEvent(dataId);
 	}
 	
 	/**
@@ -126,7 +142,16 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public void recordEvent(int dataId, short value) {
-		countOccurrence(dataId);
+		recordEvent(dataId);
+	}
+	
+	private void recordEvent(int dataId) {
+		if(dataId == weaver.getFilteringStartDataId())  isRecord =true; 	
+		if (isRecord) countOccurrence(dataId);
+		if(dataId == weaver.getFilteringEndDataId()) {
+			isRecord = false;
+			this.close();
+		}
 	}
 	
 	/**
@@ -152,15 +177,18 @@ public class EventFrequencyLogger implements IEventLogger {
 	 */
 	@Override
 	public synchronized void close() {
-		try (PrintWriter w = new PrintWriter(new FileWriter(new File(outputDir, FILENAME)))) {
+		File file = weaver.getIsFiltering() ? fng.getNextFile() : new File(outputDir, FILENAME);
+		try (PrintWriter w = new PrintWriter(new FileWriter(file))) {
 			for (int i=0; i<counters.size(); i++) {
 				AtomicInteger c = counters.get(i);
 				int count = c.get();
 				if (count > 0) {
 					w.println(i + "," + count);
+					c.set(0);
 				}
 			}
 		} catch (IOException e) {
+			
 		}
 	}
 	
