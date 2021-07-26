@@ -18,14 +18,14 @@ import selogger.logging.Logging;
 public class RuntimeWeaver implements ClassFileTransformer {
 
 	/**
-	 * The entry point of the agent.
-	 * This method initializes the Weaver instance and setup a shutdown hook
+	 * The entry point of the agent. 
+	 * This method initializes the Weaver instance and setup a shutdown hook 
 	 * for releasing resources on the termination of a target program.
 	 * @param agentArgs comes from command line.
 	 * @param inst
 	 */
 	public static void premain(String agentArgs, Instrumentation inst) {
-
+		
 		final RuntimeWeaver runtimeWeaver = new RuntimeWeaver(agentArgs);
 		Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
 			@Override
@@ -33,26 +33,27 @@ public class RuntimeWeaver implements ClassFileTransformer {
 				runtimeWeaver.close();
 			}
 		}));
-
+		
 		if (runtimeWeaver.isValid()) {
 			inst.addTransformer(runtimeWeaver);
 		}
 	}
-
+	
 	/**
 	 * The weaver injects logging instructions into target classes.
 	 */
 	private Weaver weaver;
-
+	
 	/**
 	 * The logger receives method calls from injected instructions via selogger.logging.Logging class.
 	 */
 	private IEventLogger logger;
-
+	
 	/**
 	 * Package/class names excluded from logging
 	 */
 	private ArrayList<String> exclusion;
+	
 	private static final String[] SYSTEM_PACKAGES =  { "sun/", "com/sun/", "java/", "javax/" };
 	private static final String ARG_SEPARATOR = ",";
 	private static final String SELOGGER_DEFAULT_OUTPUT_DIR = "selogger-output";
@@ -69,6 +70,8 @@ public class RuntimeWeaver implements ClassFileTransformer {
 		String dirname = SELOGGER_DEFAULT_OUTPUT_DIR;
 		String weaveOption = WeaveConfig.KEY_RECORD_ALL;
 		String classDumpOption = "false";
+		String weaveStart = "";
+		String weaveEnd = "";
 		exclusion = new ArrayList<String>();
 		for (String pkg: SYSTEM_PACKAGES) exclusion.add(pkg);
 
@@ -95,7 +98,7 @@ public class RuntimeWeaver implements ClassFileTransformer {
 				prefix = prefix.replace('.', '/');
 				exclusion.add(prefix);
 			} else if (arg.startsWith("format=")) {
-				String opt = arg.substring("format=".length()).toLowerCase();
+				String opt = arg.substring("format=".length()).toLowerCase(); 
 				if (opt.startsWith("freq")) {
 					mode = Mode.Frequency;
 				} else if (opt.startsWith("discard")) {
@@ -107,9 +110,13 @@ public class RuntimeWeaver implements ClassFileTransformer {
 				} else if (opt.startsWith("latest-simple")||opt.startsWith("fixed")) {
 					mode = Mode.FixedSize;
 				}
+			} else if (arg.startsWith("weaveStart=")) {
+				weaveStart = arg.substring("weaveStart=".length());
+			} else if (arg.startsWith("weaveEnd=")) {
+				weaveEnd = arg.substring("weaveEnd=".length());
 			}
 		}
-
+		
 		File outputDir = new File(dirname);
 		if (!outputDir.exists()) {
 			outputDir.mkdirs();
@@ -118,29 +125,28 @@ public class RuntimeWeaver implements ClassFileTransformer {
 		if (outputDir.isDirectory() && outputDir.canWrite()) {
 			WeaveConfig config = new WeaveConfig(weaveOption);
 			if (config.isValid()) {
-				weaver = new Weaver(outputDir, config);
+				weaver = new Weaver(outputDir, weaveStart, weaveEnd, config);
 				weaver.setDumpEnabled(classDumpOption.equalsIgnoreCase("true"));
-
 				switch (mode) {
-				case FixedSize:
-					logger = Logging.initializeLatestDataLogger(outputDir, bufferSize, keepObject);
-					break;
-
-				case FixedSizeTimestamp:
-					logger = Logging.initializeLatestEventTimeLogger(outputDir, bufferSize, keepObject);
-					break;
-
-				case Frequency:
-					logger = Logging.initializeFrequencyLogger(outputDir);
-					break;
-
-				case Stream:
-					logger = Logging.initializeStreamLogger(outputDir, true, weaver);
-					break;
-
-				case Discard:
-					logger = Logging.initializeDiscardLogger();
-					break;
+					case FixedSize:
+						logger = Logging.initializeLatestDataLogger(outputDir, bufferSize, keepObject);
+						break;
+						
+					case FixedSizeTimestamp:
+						logger = Logging.initializeLatestEventTimeLogger(outputDir, bufferSize, keepObject);
+						break;
+						
+					case Frequency:
+						logger = Logging.initializeFrequencyLogger(outputDir, weaver);
+						break;
+						
+					case Stream:
+						logger = Logging.initializeStreamLogger(outputDir, true, weaver);
+						break;
+						
+					case Discard:
+						logger = Logging.initializeDiscardLogger();
+						break;
 				}
 			} else {
 				System.out.println("No weaving option is specified.");
@@ -151,7 +157,6 @@ public class RuntimeWeaver implements ClassFileTransformer {
 			weaver = null;
 		}
 	}
-
 	/**
 	 * @return true if the logging is executable
 	 */
@@ -160,15 +165,14 @@ public class RuntimeWeaver implements ClassFileTransformer {
 	}
 
 	/**
-	 * Close data streams if necessary
+	 * Close data streams if necessary 
 	 */
 	public void close() {
 		logger.close();
 		weaver.close();
 	}
-
 	/**
-	 * This method checks whether a given class is a logging target or not.
+	 * This method checks whether a given class is a logging target or not. 
 	 * @param className specifies a class.  A package separator is "/".
 	 * @return true if it is excluded from logging.
 	 */

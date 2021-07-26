@@ -7,8 +7,9 @@ import selogger.logging.io.DiscardLogger;
 import selogger.logging.io.EventFrequencyLogger;
 import selogger.logging.io.EventStreamLogger;
 import selogger.logging.io.LatestEventLogger;
-import selogger.logging.io.LatestEventTimeLogger;
+import selogger.logging.io.LatestEventLogger.ObjectRecordingStrategy;
 import selogger.logging.io.MemoryLogger;
+import selogger.weaver.Weaver;
 
 
 
@@ -51,25 +52,11 @@ public class Logging {
 	 * @param outputDir specifies a directory where files are created.
 	 * @return the created logger instance.
 	 */
-	public static IEventLogger initializeFrequencyLogger(File outputDir) {
-		INSTANCE = new EventFrequencyLogger(outputDir);
+	public static IEventLogger initializeFrequencyLogger(File outputDir, Weaver weaver) {
+		INSTANCE = new EventFrequencyLogger(outputDir, weaver);
 		return INSTANCE;
 	}
 	
-	/**
-	 * Create a data logger and stores it to the INSTANCE field.
-	 * The logger records the latest k events for each event type (dataId). 
-	 * Although it may miss some frequent events, it works with a limited size of storage.
-	 * @param outputDir specifies a directory where files are created.
-	 * @param bufferSize specifies the buffer size k.  
-	 * @param keepObj enables the logger to directly keep event-related objects in order to avoid GC.
-	 * @return the created logger instance.
-	 */
-	public static IEventLogger initializeLatestDataLogger(File outputDir, int bufferSize, boolean keepObject) {
-		INSTANCE = new LatestEventLogger(outputDir, bufferSize, keepObject);
-		return INSTANCE;
-	}
-
 	/**
 	 * Create a data logger and stores it to the INSTANCE field.
 	 * The logger records the latest k events for each event type (dataId) with thread ID asd timestamps. 
@@ -77,10 +64,11 @@ public class Logging {
 	 * @param outputDir specifies a directory where files are created.
 	 * @param bufferSize specifies the buffer size k.  
 	 * @param keepObj enables the logger to directly keep event-related objects in order to avoid GC.
+	 * @param outputJson generates a data file in a JSON format
 	 * @return the created logger instance.
 	 */
-	public static IEventLogger initializeLatestEventTimeLogger(File outputDir, int bufferSize, boolean keepObject) {
-		INSTANCE = new LatestEventTimeLogger(outputDir, bufferSize, keepObject);
+	public static IEventLogger initializeLatestEventTimeLogger(File outputDir, int bufferSize, ObjectRecordingStrategy keepObject, boolean outputJson) {
+		INSTANCE = new LatestEventLogger(outputDir, bufferSize, keepObject, outputJson);
 		return INSTANCE;
 	}
 	

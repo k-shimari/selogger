@@ -11,7 +11,6 @@ import java.util.Set;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.objectweb.asm.ClassReader;
 
 import selogger.EventType;
 import selogger.logging.Logging;
@@ -75,19 +74,11 @@ public class WeaverAllTest {
 	 * @throws IOException
 	 */
 	public Counters getEventFrequency(WeaveConfig config) throws IOException {
-		// Weave the main class
-		WeaveLog weaveLog = new WeaveLog(0, 0, 0);
-		String className = "selogger/testdata/SimpleTarget";
-		ClassReader r = new ClassReader(className);
-		ClassTransformer c = new ClassTransformer(weaveLog, config, r, this.getClass().getClassLoader());
-		WeaveClassLoader loader = new WeaveClassLoader();
-		Class<?> wovenClass = loader.createClass("selogger.testdata.SimpleTarget", c.getWeaveResult());
+		// Weave the classes
 		MemoryLogger memoryLogger = Logging.initializeForTest();
-		
-		// Weave the inner class
-		ClassReader r2 = new ClassReader("selogger/testdata/SimpleTarget$StringComparator");
-		ClassTransformer c2 = new ClassTransformer(weaveLog, config, r2, this.getClass().getClassLoader());
-		loader.createClass("selogger.testdata.SimpleTarget$StringComparator", c2.getWeaveResult());
+		WeaveClassLoader loader = new WeaveClassLoader(config);
+		Class<?> wovenClass = loader.loadAndWeaveClass("selogger.testdata.SimpleTarget");
+		loader.loadAndWeaveClass("selogger.testdata.SimpleTarget$StringComparator");
 		
 		try {
 			// Execute the testAll method
@@ -97,7 +88,7 @@ public class WeaverAllTest {
 	
 			// Count the events
 			Counters counters = new Counters();
-			EventIterator it = new EventIterator(memoryLogger, weaveLog);
+			EventIterator it = new EventIterator(memoryLogger, loader.getWeaveLog());
 			while (it.next()) {
 				counters.increment(it.getEventType());
 			}
@@ -107,6 +98,7 @@ public class WeaverAllTest {
 			return null;
 			
 		} finally {
+			// unload classes
 			wovenClass = null;
 			loader = null;
 		}
@@ -156,7 +148,7 @@ public class WeaverAllTest {
 		arrayEvents = new HashSet<>(Arrays.asList(new EventType[] {EventType.ARRAY_LENGTH, EventType.ARRAY_LENGTH_RESULT, EventType.ARRAY_LOAD, EventType.ARRAY_LOAD_INDEX, EventType.ARRAY_LOAD_RESULT, EventType.ARRAY_STORE, EventType.ARRAY_STORE_INDEX, EventType.ARRAY_STORE_VALUE, EventType.MULTI_NEW_ARRAY, EventType.MULTI_NEW_ARRAY_ELEMENT, EventType.MULTI_NEW_ARRAY_OWNER, EventType.NEW_ARRAY, EventType.NEW_ARRAY_RESULT, EventType.CATCH, EventType.CATCH_LABEL}));
 		syncEvents = new HashSet<>(Arrays.asList(new EventType[] {EventType.MONITOR_ENTER, EventType.MONITOR_ENTER_RESULT, EventType.MONITOR_EXIT, EventType.CATCH, EventType.CATCH_LABEL}));
 		objectEvents = new HashSet<>(Arrays.asList(new EventType[] {EventType.OBJECT_CONSTANT_LOAD, EventType.OBJECT_INSTANCEOF, EventType.OBJECT_INSTANCEOF_RESULT}));
-		labelEvents = new HashSet<>(Arrays.asList(new EventType[] {EventType.LABEL, EventType.CATCH, EventType.CATCH_LABEL, EventType.METHOD_THROW}));
+		labelEvents = new HashSet<>(Arrays.asList(new EventType[] {EventType.LABEL, EventType.CATCH, EventType.CATCH_LABEL}));
 		lineEvents = new HashSet<>(Arrays.asList(new EventType[] {EventType.LINE_NUMBER}));
 	}
 

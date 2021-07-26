@@ -1,9 +1,12 @@
 
 # SELogger
 
-SELogger is a tool to record an execution trace of a Java program.
+SELogger is a Java Agent to record an [execution trace](#execution-trace) of a Java program.
 The tool name "SE" means Software Engineering, because the tool is developed for software engineering research topics including omniscient debugging. 
 
+The design of this tool is partly explained in the following articles.
+- Kazumasa Shimari, Takashi Ishio, Tetsuya Kanda, Naoto Ishida, Katsuro Inoue: "NOD4J: Near-omniscient debugging tool for Java using size-limited execution trace", Science of Computer Programming, Volume 206, 2021, 102630, ISSN 0167-6423, https://doi.org/10.1016/j.scico.2021.102630.
+- Kazumasa Shimari, Takashi Ishio, Tetsuya Kanda, Katsuro Inoue: "Near-Omniscient Debugging for Java Using Size-Limited Execution Trace", ICSME 2019 Tool Demo Track, https://ieeexplore.ieee.org/abstract/document/8919216
 
 ## Build
 
@@ -23,15 +26,16 @@ If you would like to build a jar file for JDK7, please skip compilation of test 
   - Replace the JDK version `1.8` with `1.7` for the `maven-compiler-plugin` in `pom.xml`.
   - Execute `mvn package -Dmaven.test.skip=true`.
 
+
 ## Usage
 
 Execute your program with the Java Agent.
 
-        java -javaagent:path/to/selogger-0.2.3.jar [Application Options]
+        java -javaagent:path/to/selogger-0.3.0.jar [Application Options]
 
 The agent accepts options.  Each option is specified by `option=value` style with commas (","). For example:
 
-        java -javaagent:path/to/selogger-0.2.3.jar=output=dirname,format=freq [Application Options]
+        java -javaagent:path/to/selogger-0.3.0.jar=output=dirname,format=freq [Application Options]
 
 
 ### Output Options
@@ -40,20 +44,26 @@ The `output=` option specifies a directory to store an execution trace.
 The directory is automatically created if it does not exist.
 The default output directory is `selogger-output`.
 
-The `format=` option specifies an output format.  The default is `latest` format.
+The `format=` option specifies an output format.  The default is `latest` format.  The details of each option is described in the [DataFormat.md](DataFormat.md) file.
+
   * `freq` mode records only a frequency table of events.
   * `latest` mode records the latest event data with timestamp and thread ID for each bytecode location. 
   * `nearomni` mode is an alias of `latest`.
-  * `latest-simple` mode records only the latest event data for each bytecode location.
   * `omni` mode records all the events in a stream.
   * `discard` mode discard event data, while it injects logging code into classes.
 
-In `latest` and `latesttime` mode, two additional options are available:
-  * `size=` specifies the size of buffers.  The default is 32.
-  * `keepobj=false` keeps objects using weak references to avoid the impact of GC.  It reduces memory consumption, while some object information may be lost.
+In the `latest`/`nearomni` mode, three additional options are available:
+  * `size=` specifies the size of buffers (the number of recorded events per source code location).  The default is 32.
+  * `keepobj={strong|weak|id}` specifies how to record objects in a trace.
+    * (Default) `keepobj=strong` keeps all objects in recent events. 
+    * `keepobj=weak` keeps objects using weak references to avoid the impact to GC.  It reduces memory consumption, while some object information may be lost.
+    * `keepobj=id` assigns unique IDs to objects in the same way as `format=omni`.  This option maintains an object-to-id map on memory but may reduce memory consumption.
+    * For compatibility with previous versions of SELogger, `keepobj={true|false}` is regarded as `keepobj={strong|weak}`, respectively. 
+  * `json={true|false}` specifies whether the output file is written in a JSON format or not.
+    * The default value is false.
 
 
-### Logging Target Options
+### Logging Target Event Options
 
 The `weave=` option specifies events to be recorded. Supported event groups are: 
 
@@ -66,14 +76,55 @@ The `weave=` option specifies events to be recorded. Supported event groups are:
   * SYNC (synchronized blocks)
   * LOCAL (local variables)
   * LABEL (conditional branches)
+  * LINE (line numbers)
+  * ALL (All events listed above)
+
+You can add multiple groups in a single option using `+`.  
+The dafault configuration is `EXEC+CALL+FIELD+ARRAY+SYNC+OBJECT+PARAM`.
 
 The default configuration records all events. 
 
-The selogger inserts logging code into all the classes except for system classes: `sun/`,`com/sun/`, `java/`, and `javax/`.
-You can add a prefix of class names whose behavior is excluded from the logging process using `e=` option.  Use multiple `e=` options to enumerate class paths.
-
 Note: The event category names EXEC and CALL come from AspectJ pointcut: execution and call.
 
+
+### Excluding Libraries from Logging
+
+Logging may generate a huge amount of events. 
+You can manually exclude some classes from logging by specifying filtering options.
+
+You can find a list of loaded classes in the `log.txt` file generated by SELogger.  
+A message `Weaving executed: [Class Name] loaded from [URI]` shows a pair of class name and location.
+
+#### Filtering by Package and Class Names
+
+Using `e=` option, you can specify a prefix of class names excluded from the logging process.  
+You can use multiple `e=` options to enumerate class paths.
+By default, the selogger excludes the system classes from logging: `sun/`,`com/sun/`, `java/`, and `javax/`.
+
+If a class is excluded from logging by this filter, a log message `Excluded by name filter: (the class name)` is recorded in a log file.
+
+#### Filtering by File Location
+
+Using `exlocation=` option, you can exclude classes loaded from a particular directory or JAR file.
+If a specified string is included in a URI where the class is loaded, that class is excluded from logging.
+For example, you can exclude classes loaded from Maven dependencies by using `exlocation=.m2` option.
+
+You can use multiple `exlocation=` options to enumerate file paths.
+By default, no location filter is configured.
+
+If a class is excluded from logging by this filter, a log message `Excluded by class filter: (the class name) loaded from (location name)` is recorded in a log file.
+
+
+#### Infinite loop risk 
+
+The security manager mechanism of Java Virtual Machine may call a `checkPermission` method to check whether a method call is allowed in the current context or not.
+When a custom security manager having a `checkPermission` method is defined in a target program, SELogger injects logging code into the method by default. 
+The logging code tries to record an execution of `checkPermission`.  
+The logging step triggers an additional `checkPermission` call, and results in infinite recursive calls.
+
+To reduce the risk of infinite recursive calls, SELogger automatically detects a subclass of SecurityManager and exclude the class from weaving.
+If such a class is detected, a log message `Excluded security manager subclass` is recorded.
+If you would like to weave logging code into such a subclass, add `weavesecuritymanager=true` option.
 
 
 ### Option for Troubleshooting
@@ -81,37 +132,11 @@ Note: The event category names EXEC and CALL come from AspectJ pointcut: executi
 The `dump=true` option stores class files including logging code into the output directory. It may help a debugging task if invalid bytecode is generated. 
 
 
-## Package Structure
-
-SELogger comprises three sub-packages: `logging`, `reader`, and `weaver`.
-
-  - The `weaver` sub-package is an implementation of Java Agent.  
-    - RuntimeWeaver class is the entry point of the agent.  It calls ClassTransformer to inject logging instructions into target classes.
-  - The `logging` sub-package implements logging features.
-    - Logging class is the entry point of the logging feature.  It records runtime events in files.
-  - The `reader` sub-package implements classes to read log files.
-    - LogPrinter class is an example to read `.slg` files generated by logging classes. 
+## Execution Trace
 
 
-## Runtime Events
-
-The runtime events are listed in `selogger.EventType` class. 
-Each event is recorded before/after a particular bytecode instruction is executed.
-Hence, SELogger assigns `data ID` to each event based on the bytecode location (class, method, and instruction position in the method).
-Using the data ID, users can distinguish events generated by different bytecode instructions.
-
-Each runtime event has static attributes, e.g. method name called by a method call instruction.
-Those attributes are stored in `dataids.txt` in the output directory.
-
-The dynamic information, data recorded with events are stored in a trace file.
-The default `nearomni` option generates a text file named `recentdata.txt` whose line includes the following data items in a CSV format:
- - Data ID representing an event
- - The number of the events observed in the execution 
- - The number of events recorded in the file
- - A list of recorded values (triples of a data value, a sequential number representing the order of recording, and a thread ID) for the events
-
-The following table is a list of events.
-The event name is defined in the class `EventType`.  
+The following table is a list of events that can be recorded by SELogger.
+The event name is defined in the class `selogger.EventType`.  
 
 
 |Event Category         |Event Name                |Timing       |Recorded Data|
@@ -168,68 +193,22 @@ The event name is defined in the class `EventType`.
 |                           |LINE_NUMBER|This event represents an execution of a line of source code.  As a single line of code may be compiled into separated bytecode blocks, a number of LINE_NUMBER events having different data ID may point to the same line number.||
 
 
-### Runtime Data Contents in the Omniscient mode
 
-#### LOG$Types.txt
 
-The file records object types.
-It is a CSV file including 6 columns.
 
-- Type ID
-- Type Name
-- Class file location
-- The superclass type ID
-- The component type ID (available for an array type) 
-- A string representation of class loader that loaded the type and followed by the class name.  This text is linked to the weaving information (`classes.txt`) described below.
+## Package Structure
 
-#### LOG$ObjectTypesNNNNN.txt
+SELogger comprises three sub-packages: `logging`, `reader`, and `weaver`.
 
-This CSV file includes two columns.
-Each row represents an object.
+  - The `weaver` sub-package is an implementation of Java Agent.  
+    - RuntimeWeaver class is the entry point of the agent.  It calls ClassTransformer to inject logging instructions into target classes.
+  - The `logging` sub-package implements logging features.
+    - Logging class is the entry point of the logging feature.  It records runtime events in files.
+  - The `reader` sub-package implements classes to read log files.
+    - LogPrinter class is an example to read `.slg` files generated by logging classes. 
 
-- The first column shows the object ID.
-- The second column shows the type ID.
 
-#### LOG$ExceptionNNNNN.txt
 
-This is a semi-structured CSV file records messages and stack traces of exceptions thrown during a program execution.
-Each exception is recorded by the following lines.
-
-- Message line including three columns
-  - Object ID of the Throwable object
-  - A literal "M"
-  - Textual message returned by `Throwable.getMessage()`
-- Cause Object
-  - Object ID of the Throwable object
-  - A literal "CS"
-  - Object ID of the cause object returned by `Throwable.getCause()`
-  - If the object has suppressed exceptions (returned by `getSuppressed()`), their object IDs
-- Stack Trace Elements (Each line corresponds to a single line of a stack trace)
-  - Object ID of the Throwable object
-  - A literal "S"
-  - A literal "T" or "F": "T" represents the method is a native method.
-  - Class Name
-  - Method Name
-  - File Name
-  - Line Number
-
-#### LOG$StringNNNNN.txt
-
-The file records the contents of string objects used in an execution.
-It is a CSV file format; each line has three fields.
-
-- The object ID of the string
-- The length of the string
-- The content escaped as a JSON string
-
-## Weaving Events
-
-The weaver component generates the following files during the weaving. 
- - `weaving.properties`: The configuration options recognized by the weaver.
- - `classes.txt`: A list of woven classes.  The content is defined in the `selogger.weaver.ClassInfo` class.
- - `methods .txt`: A list of methods in the woven classes.  The content is defined in the `selogger.weaver.MethodInfo` class.
- - `dataids.txt`: A list of Data IDs. 
- - `log.txt`: Recording errors encountered during bytecode manipulation.
  
  
 ## Limitation
@@ -238,9 +217,11 @@ The logging feature for some instructions (in particular, JUMP, RET, INVOKEDYNAM
 
 To record Local variable names and line numbers, the tool uses debugging information embedded in class files. 
 
-## Differences from master branch version
 
-The execution trace recorded in this version is incompatible with the master branch version.
+## History
+
+The first version of SELogger (in `icpc204` branch) is a static weaver for omniscient debugging .
+The execution trace recorded in this version is incompatible with the branch version.
 The major differences are:
  * Simplified data format
  * Simplified instrumentation implementation
@@ -250,14 +231,7 @@ The major differences are:
  * Supported fixed-size buffer logging
  * Improved reliability with JUnit test cases
 
-The documentation for the master branch is available in the `doc` directory.
+Please note that the documentation in the `doc` directory was written for the old version.
+We still keep the files for the record.
 
 
-## Reference
-
-The design of this tool is partly explained in the following article.
-
-        Kazumasa Shimari, Takashi Ishio, Tetsuya Kanda, Naoto Ishida, Katsuro Inoue: 
-        "NOD4J: Near-omniscient debugging tool for Java using size-limited execution trace", 
-        Science of Computer Programming, Volume 206, 2021, 102630, ISSN 0167-6423,
-        https://doi.org/10.1016/j.scico.2021.102630.

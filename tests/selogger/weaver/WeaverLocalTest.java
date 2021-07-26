@@ -11,7 +11,6 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.objectweb.asm.ClassReader;
 
 import selogger.EventType;
 import selogger.logging.Logging;
@@ -26,7 +25,6 @@ import selogger.weaver.method.Descriptor;
  */
 public class WeaverLocalTest {
 
-	private WeaveLog weaveLog;
 	private Class<?> wovenClass;
 	@SuppressWarnings("unused")
 	private Class<?> innerClass;
@@ -35,19 +33,13 @@ public class WeaverLocalTest {
 	
 	@Before
 	public void setup() throws IOException {
-		weaveLog = new WeaveLog(0, 0, 0);
-		String className = "selogger/testdata/SimpleTarget";
-		ClassReader r = new ClassReader(className);
 		WeaveConfig config = new WeaveConfig(WeaveConfig.KEY_RECORD_DEFAULT_PLUS_LOCAL); 
-		ClassTransformer c = new ClassTransformer(weaveLog, config, r, this.getClass().getClassLoader());
-		WeaveClassLoader loader = new WeaveClassLoader();
-		wovenClass = loader.createClass("selogger.testdata.SimpleTarget", c.getWeaveResult());
+		WeaveClassLoader loader = new WeaveClassLoader(config);
+		wovenClass = loader.loadAndWeaveClass("selogger.testdata.SimpleTarget");
+		innerClass = loader.loadClassFromResource("selogger.testdata.SimpleTarget$StringComparator", "selogger/testdata/SimpleTarget$StringComparator.class");
+	
 		memoryLogger = Logging.initializeForTest();
-		
-		byte[] buf = ClassLoader.getSystemResourceAsStream("selogger/testdata/SimpleTarget$StringComparator.class").readAllBytes();
-		innerClass = loader.createClass("selogger.testdata.SimpleTarget$StringComparator", buf) ;
-
-		it = new EventIterator(memoryLogger, weaveLog);
+		it = new EventIterator(memoryLogger, loader.getWeaveLog());
 	}
 	
 	@After
