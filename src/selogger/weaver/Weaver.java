@@ -47,15 +47,32 @@ public class Weaver implements IErrorLogger {
 	private MessageDigest digest;
 	private WeaveConfig config;
 
+	private boolean isFiltering;
+	private String weaveStart;
+	private String weaveEnd;
+	private int startMethodId;
+	private int endMethodId;
 
+	private int filteringStartDataId;
+	private int filteringEndDataId;
+		
+	
 	/**
 	 * Set up the object to manage a weaving process. 
 	 * This constructor creates files to store the information.
 	 * @param outputDir
 	 */
-	public Weaver(File outputDir, WeaveConfig config) {
+	public Weaver(File outputDir, String weaveStart, String weaveEnd, WeaveConfig config) {	
 		assert outputDir.isDirectory() && outputDir.canWrite();
 		
+		isFiltering = !(weaveStart.equals("") && weaveEnd.equals(""));
+		this.weaveStart = weaveStart;
+		this.weaveEnd = weaveEnd;
+		startMethodId = -1;
+		endMethodId = -1;
+		filteringStartDataId = -1;
+		filteringEndDataId = -1;
+
 		this.outputDir = outputDir;
 		this.config = config;
 		confirmedDataId = 0;
@@ -86,6 +103,7 @@ public class Weaver implements IErrorLogger {
 
 	}
 	
+
 	/**
 	 * Record a message.
 	 */
@@ -217,28 +235,26 @@ public class Weaver implements IErrorLogger {
 		}
 		classId++;
 
-		// Commit location IDs to the final output 
-		confirmedDataId = result.getNextDataId();
-		try {
-			if (dataIdWriter != null) {
-				for (DataInfo loc: result.getDataEntries()) {
-					dataIdWriter.write(loc.toString());
-					dataIdWriter.write(lineSeparator);
-				}
-				dataIdWriter.flush();
-			}
-		} catch (IOException e) {
-			e.printStackTrace(logger);
-			dataIdWriter = null;
-		}
 		
 		// Commit method IDs to the final output
 		confirmedMethodId = result.getNextMethodId();
 		if (methodIdWriter != null) {
 			try {
-				for (MethodInfo method: result.getMethods()) {
+				int idx = 0;
+				for (MethodInfo method: result.getMethods()) {					
 					methodIdWriter.write(method.toString());
 					methodIdWriter.write(lineSeparator);
+					if(isFiltering) {
+						if(!weaveStart.equals("") && method.getClassName().equals(weaveStart.substring(0, weaveStart.indexOf(".")))
+							&& method.getMethodName().equals(weaveStart.substring(weaveStart.indexOf(".") + 1))){
+							startMethodId = confirmedMethodId - result.getMethods().size() + idx;
+						}
+						if(!weaveEnd.equals("") && method.getClassName().equals(weaveEnd.substring(0, weaveEnd.indexOf(".")))
+								&& method.getMethodName().equals(weaveEnd.substring(weaveEnd.indexOf(".") + 1))){
+							endMethodId = confirmedMethodId - result.getMethods().size() + idx;
+						}
+						idx++;
+					}
 				}
 				methodIdWriter.flush();
 			} catch (IOException e) {
@@ -247,6 +263,39 @@ public class Weaver implements IErrorLogger {
 			}
 		}
 		
+		// Commit location IDs to the final output 
+		confirmedDataId = result.getNextDataId();
+		try {
+			if (dataIdWriter != null) {
+				for (DataInfo loc: result.getDataEntries()) {
+					dataIdWriter.write(loc.toString());
+					dataIdWriter.write(lineSeparator);
+					if(isFiltering) {
+						if(startMethodId != -1) {
+							if(loc.getMethodId() == startMethodId) {
+								filteringStartDataId = loc.getDataId() + 1;
+								startMethodId = -1;
+							}
+						}
+						if(endMethodId != -1) {
+							if(loc.getMethodId() == endMethodId) {
+								//	if(loc.getEventType().toString().equals("METHOD_NORMAL_EXIT") || loc.getEventType().toString().equals("METHOD_EXCEPTIONAL_EXIT")) {
+								if(loc.getEventType().toString().equals("METHOD_NORMAL_EXIT")) {
+									//TODO set multiple endID because method can hook both exit event
+									//TODO limitation: recursive method call
+									filteringEndDataId = loc.getDataId();
+									endMethodId = -1;
+								}
+							}
+						}
+					}
+				}
+				dataIdWriter.flush();
+			}
+		} catch (IOException e) {
+			e.printStackTrace(logger);
+			dataIdWriter = null;
+		}
 	}
 	
 
@@ -291,4 +340,21 @@ public class Weaver implements IErrorLogger {
 		}
 	}
 	
+	public boolean getIsFiltering() {
+		return isFiltering;
+	}
+
+	public String getWeaveStart() {
+		return weaveStart;
+	}
+
+	public int getFilteringStartDataId() {
+		return filteringStartDataId;
+	}
+
+
+	public int getFilteringEndDataId() {
+		return filteringEndDataId;
+	}
+
 }

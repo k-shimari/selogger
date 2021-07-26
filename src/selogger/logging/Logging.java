@@ -7,8 +7,9 @@ import selogger.logging.io.DiscardLogger;
 import selogger.logging.io.EventFrequencyLogger;
 import selogger.logging.io.EventStreamLogger;
 import selogger.logging.io.LatestEventLogger;
-import selogger.logging.io.MemoryLogger;
 import selogger.logging.io.LatestEventLogger.ObjectRecordingStrategy;
+import selogger.logging.io.MemoryLogger;
+import selogger.weaver.Weaver;
 
 
 
@@ -51,8 +52,8 @@ public class Logging {
 	 * @param outputDir specifies a directory where files are created.
 	 * @return the created logger instance.
 	 */
-	public static IEventLogger initializeFrequencyLogger(File outputDir) {
-		INSTANCE = new EventFrequencyLogger(outputDir);
+	public static IEventLogger initializeFrequencyLogger(File outputDir, Weaver weaver) {
+		INSTANCE = new EventFrequencyLogger(outputDir, weaver);
 		return INSTANCE;
 	}
 	
