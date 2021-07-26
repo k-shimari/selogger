@@ -67,7 +67,7 @@ public class Logging {
 	 * @param outputJson generates a data file in a JSON format
 	 * @return the created logger instance.
 	 */
-	public static IEventLogger initializeLatestDataLogger(File outputDir, int bufferSize, ObjectRecordingStrategy keepObject, boolean outputJson) {
+	public static IEventLogger initializeLatestEventTimeLogger(File outputDir, int bufferSize, ObjectRecordingStrategy keepObject, boolean outputJson) {
 		INSTANCE = new LatestEventLogger(outputDir, bufferSize, keepObject, outputJson);
 		return INSTANCE;
 	}

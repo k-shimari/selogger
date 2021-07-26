@@ -1,6 +1,8 @@
 package selogger.weaver;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
@@ -8,6 +10,8 @@ import java.security.CodeSource;
 import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Calendar;
+
+import org.objectweb.asm.ClassReader;
 
 import selogger.logging.IEventLogger;
 import selogger.logging.Logging;
@@ -110,6 +114,7 @@ public class RuntimeWeaver implements ClassFileTransformer {
 				weaveSecurityManagerClass = Boolean.parseBoolean(arg.substring("weavesecuritymanager=".length()));
 			} else if (arg.startsWith("json=")) {
 				String param = arg.substring("json=".length());
+				outputJson = param.equalsIgnoreCase("true");
 			} else if (arg.startsWith("keepobj=")) {
 				String param = arg.substring("keepobj=".length());
 				if (param.equalsIgnoreCase("true") || param.equalsIgnoreCase("strong")) {
@@ -160,7 +165,7 @@ public class RuntimeWeaver implements ClassFileTransformer {
 				weaver.setDumpEnabled(classDumpOption.equalsIgnoreCase("true"));
 				switch (mode) {
 					case FixedSize:
-						logger = Logging.initializeLatestDataLogger(outputDir, bufferSize, keepObject, outputJson);
+						logger = Logging.initializeLatestEventTimeLogger(outputDir, bufferSize, keepObject, outputJson);
 						break;
 												
 					case Frequency:
@@ -214,6 +219,20 @@ public class RuntimeWeaver implements ClassFileTransformer {
 	}
 
 	/**
+	 * This method checks whether a given class is a logging target or not. 
+	 * @param location is a loaded location (e.g. JAR or file path). 
+	 * @return true if it is excluded from logging.
+	 */
+	public boolean isExcludedLocation(String location) {
+		for (String ex: excludedLocations) {
+			if (location.contains(ex)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	/**
 	 * This method is called from JVM when loading a class.
 	 * This agent injects logging instructions here.
 	 */
@@ -221,7 +240,10 @@ public class RuntimeWeaver implements ClassFileTransformer {
 	public synchronized byte[] transform(ClassLoader loader, String className, Class<?> classBeingRedefined,
 			ProtectionDomain protectionDomain, byte[] classfileBuffer) throws IllegalClassFormatException {
 
-		if (isExcludedFromLogging(className)) return null;
+		if (isExcludedFromLogging(className)) {
+		    weaver.log("Excluded by name filter: " + className);
+			return null;
+		}
 
 		if (protectionDomain != null) {
 			CodeSource s = protectionDomain.getCodeSource();
@@ -232,6 +254,18 @@ public class RuntimeWeaver implements ClassFileTransformer {
 				l = "(Unknown Source)";
 			}
 
+			if (isExcludedLocation(l)) {
+			    weaver.log("Excluded by location filter: " + className + " loaded from " + l);
+				return null;
+			}
+
+			if (isSecurityManagerClass(className, loader) && !weaveSecurityManagerClass) {
+				weaver.log("Excluded security manager subclass: " + className);
+				return null;
+			}
+
+			weaver.log("Weaving executed: " + className + " loaded from " + l);
+			
 			byte[] buffer = weaver.weave(l, className, classfileBuffer, loader);
 
 			return buffer;
@@ -240,4 +274,50 @@ public class RuntimeWeaver implements ClassFileTransformer {
 		}
 	}
 
+	/**
+	 * Check whether a given class is inherited from java.lang.SecurityManager or not.
+	 * @param className specifies a class name.
+	 * @param loader specifies a class loader.
+	 * @return true if the class is a subclass of SecurityManaer.
+	 */
+	private boolean isSecurityManagerClass(String className, ClassLoader loader) {
+		while (className != null) {
+			if (className.equals("java/lang/SecurityManager")) {
+				return true;
+			} else if (className.equals("java/lang/Object")) {
+				return false;
+			}
+			className = getSuperClass(className, loader);
+		}
+		return false;
+	}
+
+	/**
+	 * Get a super class name of a given class
+	 * @param className specifies a class name
+	 * @param loader specifies a class loader to load class information
+	 * @return the super class name.  
+	 * Null is returnd if this method fails to load the class information
+	 */
+	private String getSuperClass(String className, ClassLoader loader) {
+		while(loader != null) {
+			InputStream is = loader.getResourceAsStream(className + ".class");
+			if(is != null) {
+				try {
+					ClassReader r = new ClassReader(is);
+					is.close();
+					return r.getSuperName();
+				} catch (IOException e) {
+					try {
+						is.close();
+					} catch (IOException e2) {
+					}
+				}
+				return null;
+			}
+
+			loader = loader.getParent();
+		}
+		return null;
+	}
 }
