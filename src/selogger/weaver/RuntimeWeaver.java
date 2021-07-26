@@ -11,6 +11,7 @@ import java.util.Calendar;
 
 import selogger.logging.IEventLogger;
 import selogger.logging.Logging;
+import selogger.logging.io.LatestEventLogger.ObjectRecordingStrategy;
 
 /**
  * This class is the main program of SELogger as a javaagent.
@@ -50,15 +51,25 @@ public class RuntimeWeaver implements ClassFileTransformer {
 	private IEventLogger logger;
 	
 	/**
-	 * Package/class names excluded from logging
+	 * Package/class names (prefix) excluded from logging
 	 */
 	private ArrayList<String> exclusion;
+	
+	/**
+	 * Disable automatic filtering for security manager classes
+	 */
+	private boolean weaveSecurityManagerClass;
+
+	/**
+	 * Location names (substring) excluded from logging
+	 */
+	private ArrayList<String> excludedLocations;
 	
 	private static final String[] SYSTEM_PACKAGES =  { "sun/", "com/sun/", "java/", "javax/" };
 	private static final String ARG_SEPARATOR = ",";
 	private static final String SELOGGER_DEFAULT_OUTPUT_DIR = "selogger-output";
 
-	public enum Mode { Stream, Frequency, FixedSize, FixedSizeTimestamp, Discard };
+	public enum Mode { Stream, Frequency, FixedSize, Discard };
 
 	/**
 	 * Process command line arguments and prepare an output directory
@@ -70,14 +81,17 @@ public class RuntimeWeaver implements ClassFileTransformer {
 		String dirname = SELOGGER_DEFAULT_OUTPUT_DIR;
 		String weaveOption = WeaveConfig.KEY_RECORD_ALL;
 		String classDumpOption = "false";
+		boolean outputJson = false;
+		exclusion = new ArrayList<String>();
+		excludedLocations = new ArrayList<String>();
+		
 		String weaveStart = "";
 		String weaveEnd = "";
-		exclusion = new ArrayList<String>();
 		for (String pkg: SYSTEM_PACKAGES) exclusion.add(pkg);
 
 		int bufferSize = 32;
-		boolean keepObject = true;
-		Mode mode = Mode.FixedSizeTimestamp;
+		ObjectRecordingStrategy keepObject = ObjectRecordingStrategy.Strong;
+		Mode mode = Mode.FixedSize;
 		for (String arg: a) {
 			if (arg.startsWith("output=")) {
 				dirname = arg.substring("output=".length());
@@ -91,12 +105,30 @@ public class RuntimeWeaver implements ClassFileTransformer {
 			} else if (arg.startsWith("size=")) {
 				bufferSize = Integer.parseInt(arg.substring("size=".length()));
 				if (bufferSize < 4) bufferSize = 4;
+			} else if (arg.startsWith("weavesecuritymanager=")) {
+				weaveSecurityManagerClass = Boolean.parseBoolean(arg.substring("weavesecuritymanager=".length()));
+			} else if (arg.startsWith("json=")) {
+				String param = arg.substring("json=".length());
 			} else if (arg.startsWith("keepobj=")) {
-				keepObject = Boolean.parseBoolean(arg.substring("keepobj=".length()));
+				String param = arg.substring("keepobj=".length());
+				if (param.equalsIgnoreCase("true") || param.equalsIgnoreCase("strong")) {
+					keepObject = ObjectRecordingStrategy.Strong;
+				} else if (param.equalsIgnoreCase("false") || param.equalsIgnoreCase("weak")) {
+					keepObject = ObjectRecordingStrategy.Weak;
+				} else if (param.equalsIgnoreCase("id")) {
+					keepObject = ObjectRecordingStrategy.Id;
+				}
 			} else if (arg.startsWith("e=")) {
 				String prefix = arg.substring("e=".length());
-				prefix = prefix.replace('.', '/');
-				exclusion.add(prefix);
+				if (prefix.length() > 0) {
+					prefix = prefix.replace('.', '/');
+					exclusion.add(prefix);
+				}
+			} else if (arg.startsWith("exlocation=")) {
+				String location = arg.substring("exlocation=".length());
+				if (location.length() > 0) {
+					excludedLocations.add(location);
+				}
 			} else if (arg.startsWith("format=")) {
 				String opt = arg.substring("format=".length()).toLowerCase(); 
 				if (opt.startsWith("freq")) {
@@ -106,8 +138,6 @@ public class RuntimeWeaver implements ClassFileTransformer {
 				} else if (opt.startsWith("omni")||opt.startsWith("stream")) {
 					mode = Mode.Stream;
 				} else if (opt.startsWith("latest")||opt.startsWith("nearomni")||opt.startsWith("near-omni")) {
-					mode = Mode.FixedSizeTimestamp;
-				} else if (opt.startsWith("latest-simple")||opt.startsWith("fixed")) {
 					mode = Mode.FixedSize;
 				}
 			} else if (arg.startsWith("weaveStart=")) {
@@ -129,13 +159,9 @@ public class RuntimeWeaver implements ClassFileTransformer {
 				weaver.setDumpEnabled(classDumpOption.equalsIgnoreCase("true"));
 				switch (mode) {
 					case FixedSize:
-						logger = Logging.initializeLatestDataLogger(outputDir, bufferSize, keepObject);
+						logger = Logging.initializeLatestDataLogger(outputDir, bufferSize, keepObject, outputJson);
 						break;
-						
-					case FixedSizeTimestamp:
-						logger = Logging.initializeLatestEventTimeLogger(outputDir, bufferSize, keepObject);
-						break;
-						
+												
 					case Frequency:
 						logger = Logging.initializeFrequencyLogger(outputDir, weaver);
 						break;
